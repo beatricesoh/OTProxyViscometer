@@ -14,11 +14,13 @@ metadata = {'apiLevel': '2.10'}     # Opentrons Python API Version
 
 
 def run(protocol: protocol_api.ProtocolContext):
-    #In the new application, please upload the labware into the app and just call the protocol.load_labware directly if not id error
+
+    reservoir = protocol.load_labware('amdm_12_50ml_falcon_tube', 1)  # custom labware uploaded to the application
+    
+    # Compatible with Opentrons Application v5.X; for latest v6.X and higher, the labware file should be directly uploaded into the application.
     # falcon tube holder custom labware definition - json file generated using Opentrons' custom labware creator: https://labware.opentrons.com/create/
     # .stl file for 3d-printing this holder provided in the SI
     # 2nd argument denotes position on the Opentrons plate
-    reservoir = protocol.load_labware('amdm_12_50ml_falcon_tube', 1)  # custom labware uploaded to the application
     
     plate = protocol.load_labware('amdm_6_15g_plasticjars', 2)          # Corning 6-well plate
     plate.set_offset(x=1.00, y=-6.00, z=0.00)                           # Apply Lab offset data
@@ -27,16 +29,18 @@ def run(protocol: protocol_api.ProtocolContext):
     tiprack_1.set_offset(x=-0.20, y=2.30, z=5.00)                                   # Apply Lab offset data
     
     p1000 = protocol.load_instrument('p1000_single_gen2', 'left', tip_racks=[tiprack_1])
+    # https://docs.opentrons.com/v2/pipettes/characteristics.html#ot-2-pipette-flow-rates - default flow rate of P1000 gen 2 pipette = 274.7 uL/s
 
     fr_arr            = [80]  # dispense flowrate/uL/s 
     samples_ran       = 0     # initialization counter
     no_of_samples     = 1
     adepth            = 0     # initialization - will account for what depth to aspirate from depending on past history of volume dispensed
     depth             = -80   # 80 mm from top corresponds to ~ 12.5 mL: fill the reservoir tubes to approx. 20 mL
-    asptime           = 10  # protocol aspiration time fixed to 7.5 seconds
-    disptime          = 10    # protocol dispense time fixed to 5 seconds
+    asptime           = 10  # protocol aspiration time 
+    disptime          = 10    # protocol dispense time
     asp_with = 5
-    i = 0
+    
+    i = 0  # init loop counter
 
     # Location of stored liquids & destinations
     res_letter_list = ["A", "C"]
@@ -72,7 +76,7 @@ def run(protocol: protocol_api.ProtocolContext):
             p1000.dispense(400, reservoir[str(res_letter_list[samples_ran])+"1"].top(), rate=100/274.7)
             p1000.touch_tip(v_offset=-10)
             p1000.default_speed = 400
-            for e in range(10):
+            for e in range(10): # number of tip blowouts 
                 p1000.blow_out(reservoir[str(res_letter_list[samples_ran])+"1"])
             
             # add 1mm of depth for every 10000/9ul aspirated from falcon tube
